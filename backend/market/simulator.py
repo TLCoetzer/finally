@@ -1,5 +1,6 @@
 from __future__ import annotations
 import asyncio
+import logging
 import math
 import random
 import time
@@ -7,6 +8,8 @@ import time
 from .provider import MarketDataProvider
 from .cache import PriceCache
 from .seed import UNIVERSE, TickerSpec
+
+logger = logging.getLogger(__name__)
 
 SECONDS_PER_YEAR = 365 * 24 * 3600
 
@@ -45,6 +48,7 @@ class SimulatorProvider(MarketDataProvider):
             t: _TickerState(spec) for t, spec in UNIVERSE.items()
         }
         self._task: asyncio.Task | None = None
+        self._tick_error_logged = False  # log a tick failure once, not every 500ms
 
     @property
     def source(self) -> str:
@@ -69,8 +73,11 @@ class SimulatorProvider(MarketDataProvider):
         while True:
             try:
                 self._step()
-            except Exception:
-                pass  # never kill the loop on a bad tick
+                self._tick_error_logged = False
+            except Exception:  # never kill the loop on a bad tick
+                if not self._tick_error_logged:
+                    logger.exception("Simulator tick failed; continuing")
+                    self._tick_error_logged = True
             await asyncio.sleep(self._tick)
 
     # ---- one GBM tick ----------------------------------------------------
@@ -82,15 +89,20 @@ class SimulatorProvider(MarketDataProvider):
         now = time.time()
 
         z_market = self._rng.gauss(0.0, 1.0)
-        sectors = {s.spec.sector for s in self._state.values()}
+        # sorted() makes the per-sector draw order independent of set hashing,
+        # so a seeded RNG is reproducible across processes (PYTHONHASHSEED).
+        sectors = sorted({s.spec.sector for s in self._state.values()})
         z_sector = {sec: self._rng.gauss(0.0, 1.0) for sec in sectors}
         w_idio = 1.0 - self._w_market - self._w_sector
 
-        # Simulate the tracked union; fall back to whole universe before
-        # set_tracked is first called so the first SSE frames are populated.
-        targets = self._tracked or set(self._state)
+        # Simulate the tracked union. Fall back to the whole universe only
+        # before set_tracked is first called (so the first SSE frames are
+        # populated); a deliberately empty tracked set simulates nothing.
+        targets = self._tracked if self._tracked_initialized else set(self._state)
 
-        for ticker in targets:
+        # sorted() so the per-ticker idiosyncratic/event RNG draws are consumed
+        # in a stable order — reproducible across processes (PYTHONHASHSEED).
+        for ticker in sorted(targets):
             st = self._state.get(ticker)
             if st is None:
                 continue  # ticker not in the simulator universe; skip

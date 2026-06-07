@@ -7,6 +7,11 @@
 > the test suite in `backend/tests/`.
 > **Reference specs:** `PLAN.md` §6/§8/§10, `MARKET_DATA_DESIGN.md`,
 > `MARKET_INTERFACE.md`, `MARKET_SIMULATOR.md`, `MASSIVE_API.md`.
+>
+> **Resolution (2026-06-07):** All findings below (B1, L1, L2, M1–M8) were
+> addressed in branch `fix/market-data-backend`. The suite is now 125 tests,
+> green and deterministic across `PYTHONHASHSEED`. The original findings are
+> kept verbatim for the record; see the matching commit/PR for the fixes.
 
 ## 1. Verdict
 

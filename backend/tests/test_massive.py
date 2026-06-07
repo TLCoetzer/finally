@@ -115,6 +115,15 @@ class TestExtractPrice:
         result = MassiveProvider._extract_price(snap)
         assert isinstance(result, float)
 
+    def test_string_zero_skipped(self):
+        """A string "0" is falsy-as-price too and must fall through (M3)."""
+        snap = {"lastTrade": {"p": "0"}, "min": {"c": 190.0}}
+        assert MassiveProvider._extract_price(snap) == pytest.approx(190.0)
+
+    def test_string_zero_only_returns_none(self):
+        snap = {"lastTrade": {"p": "0.00"}, "min": {}, "day": {}, "prevDay": {}}
+        assert MassiveProvider._extract_price(snap) is None
+
 
 # ---- _poll_once ----------------------------------------------------------
 
@@ -269,6 +278,39 @@ async def test_is_supported_fails_closed_on_http_error():
     patch_client(provider, [mock_get_response(500, {})])
     result = await provider.is_supported("AAPL")
     assert result is False
+
+
+@pytest.mark.asyncio
+async def test_is_supported_failure_not_cached():
+    """L2: a transient failure returns False but must NOT be memoised, so a
+    later retry of a valid symbol can succeed."""
+    cache, provider = make_provider()
+    mock_client = Mock()
+    mock_client.get = AsyncMock(side_effect=[
+        httpx.ConnectError("blip"),                                  # 1st: fails
+        mock_get_response(200, {"results": [{"ticker": "AAPL"}]}),   # 2nd: ok
+    ])
+    mock_client.aclose = AsyncMock()
+    provider._client = mock_client
+
+    assert await provider.is_supported("AAPL") is False  # transient failure
+    assert "AAPL" not in provider._supported              # not memoised
+    assert await provider.is_supported("AAPL") is True    # retry succeeds
+    assert mock_client.get.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_is_supported_negative_result_is_cached():
+    """A definitive 'not found' is still memoised (no repeat HTTP)."""
+    cache, provider = make_provider()
+    mock_client = Mock()
+    mock_client.get = AsyncMock(return_value=mock_get_response(200, {"results": []}))
+    mock_client.aclose = AsyncMock()
+    provider._client = mock_client
+
+    assert await provider.is_supported("ZZZZ") is False
+    assert await provider.is_supported("ZZZZ") is False
+    assert mock_client.get.call_count == 1, "definitive negative should be cached"
 
 
 # ---- backoff logic -------------------------------------------------------

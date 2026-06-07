@@ -13,6 +13,7 @@ class MarketDataProvider(abc.ABC):
     def __init__(self, cache: PriceCache) -> None:
         self.cache = cache
         self._tracked: set[str] = set()
+        self._tracked_initialized = False  # True once set_tracked is first called
 
     # ---- lifecycle (idempotent) ------------------------------------------
 
@@ -33,6 +34,7 @@ class MarketDataProvider(abc.ABC):
         tickers = {t.upper() for t in tickers}
         stale = self._tracked - tickers
         self._tracked = tickers
+        self._tracked_initialized = True
         if stale:
             self.cache.drop(stale)
 
