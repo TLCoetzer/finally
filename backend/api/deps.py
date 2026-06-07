@@ -1,3 +1,4 @@
+from __future__ import annotations
 from fastapi import Request
 
 from market.provider import MarketDataProvider

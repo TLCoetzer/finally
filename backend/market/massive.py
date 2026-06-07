@@ -1,10 +1,13 @@
 from __future__ import annotations
 import asyncio
+import logging
 
 import httpx
 
 from .provider import MarketDataProvider
 from .cache import PriceCache
+
+logger = logging.getLogger(__name__)
 
 BASE = "https://api.massive.com"
 
@@ -31,6 +34,7 @@ class MassiveProvider(MarketDataProvider):
             timeout=10.0,  # finite — never hang the loop
         )
         self._supported: dict[str, bool] = {}  # memoised is_supported answers
+        self._logged_errors: set = set()  # log each poll error condition once
 
     @property
     def source(self) -> str:
@@ -58,11 +62,20 @@ class MassiveProvider(MarketDataProvider):
             try:
                 await self._poll_once()
                 backoff = self._poll  # recovered — restore base interval
+                self._logged_errors.clear()  # next error episode logs afresh
             except httpx.HTTPStatusError as e:
-                if e.response.status_code == 429:
+                code = e.response.status_code
+                if code == 429:
                     backoff = min(backoff * 2, 60.0)  # rate-limit backoff
-            except Exception:
-                pass  # network blip — keep last cache values, never crash
+                    logger.warning("Massive rate-limited (429); backing off to %.0fs", backoff)
+                elif code not in self._logged_errors:
+                    self._logged_errors.add(code)
+                    logger.error("Massive returned HTTP %s; poller continuing", code)
+            except Exception as e:  # network blip — keep last cache, never crash
+                key = type(e).__name__
+                if key not in self._logged_errors:
+                    self._logged_errors.add(key)
+                    logger.warning("Massive poll failed (%s); keeping last cache values", key)
             await asyncio.sleep(backoff)
 
     async def _poll_once(self) -> None:
@@ -94,8 +107,11 @@ class MassiveProvider(MarketDataProvider):
         ):
             obj = snap.get(obj_key) or {}
             v = obj.get(val_key)
-            if v:
-                return float(v)
+            if v is None:
+                continue
+            price = float(v)  # tolerate numeric or string fields
+            if price != 0.0:   # treat 0 / "0" as missing, fall through
+                return price
         return None
 
     # ---- validation ------------------------------------------------------
@@ -116,7 +132,10 @@ class MassiveProvider(MarketDataProvider):
             r.raise_for_status()
             results = r.json().get("results", [])
             ok = bool(results) and results[0].get("ticker", "").upper() == t
-        except Exception:
-            ok = False  # fail closed — never admit an unvalidated symbol
-        self._supported[t] = ok
+        except Exception as e:
+            # Fail closed for this call, but do NOT memoise: a transient blip
+            # must not block a valid symbol for the process lifetime.
+            logger.warning("Massive is_supported(%s) failed (%s); not caching", t, type(e).__name__)
+            return False
+        self._supported[t] = ok  # only definitive answers are cached
         return ok

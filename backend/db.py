@@ -2,7 +2,13 @@
 
 This stub keeps the backend importable and the app wirable while the
 SQLite/schema layer is being built. Replace these functions with real
-SQLite queries once the DB issue is closed."""
+SQLite queries once the DB issue is closed.
+
+Until then, watchlist_tickers() returns the default seeded watchlist
+(PLAN.md §7) so the market data layer streams the expected ten tickers."""
+from __future__ import annotations
+
+from market.seed import DEFAULT_WATCHLIST
 
 
 def init_if_needed() -> None:
@@ -10,8 +16,8 @@ def init_if_needed() -> None:
 
 
 def watchlist_tickers() -> list[str]:
-    """Return tickers currently on the watchlist."""
-    return []
+    """Return tickers currently on the watchlist (default seed for now)."""
+    return list(DEFAULT_WATCHLIST)
 
 
 def position_tickers() -> list[str]:

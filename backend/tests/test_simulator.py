@@ -199,6 +199,20 @@ def test_fallback_to_whole_universe_before_set_tracked():
         assert cache.get(ticker) is not None, f"{ticker} missing before set_tracked"
 
 
+def test_empty_tracked_set_simulates_nothing():
+    """A deliberately empty tracked set must NOT resurrect the universe (L1).
+    Once set_tracked has been called, the whole-universe fallback no longer
+    applies, so an empty set means an empty cache."""
+    cache, sim = make_sim(rng_seed=5)
+    sim.set_tracked({"AAPL"})
+    sim._step()
+    assert cache.get("AAPL") is not None
+
+    sim.set_tracked(set())  # e.g. watchlist cleared and nothing held
+    sim._step()
+    assert cache.known_tickers() == set(), "empty tracked must leave an empty cache"
+
+
 # ---- prev_price rolls correctly -----------------------------------------
 
 def test_prev_price_rolls_forward():
@@ -241,8 +255,20 @@ async def test_start_is_idempotent():
 
 def test_same_sector_correlates_more_than_cross_sector():
     """Over many ticks, AAPL↔GOOGL (both tech) should correlate more
-    strongly than AAPL↔JPM (tech vs finance). Loose threshold: > 0."""
-    cache, sim = make_sim(rng_seed=2024)
+    strongly than AAPL↔JPM (tech vs finance).
+
+    Three things make this assertion stable rather than a coin flip:
+      * returns are measured on the full-precision internal price, not the
+        cent-rounded cache value (the true per-tick move is sub-cent, so
+        rounding would quantise the signal into noise);
+      * event_prob=0 disables the rare 2-5% shocks, which are idiosyncratic
+        by design and otherwise dominate one ticker's variance over a short
+        window and swamp the factor correlation;
+      * _step draws in sorted order, so the result is deterministic across
+        PYTHONHASHSEED.
+    With the factor weights (w_market=0.4, w_sector=0.3) the expected
+    correlations are ~0.7 (same sector) vs ~0.4 (cross sector)."""
+    cache, sim = make_sim(rng_seed=2024, event_prob=0.0)
     tickers = {"AAPL", "GOOGL", "JPM"}
     sim.set_tracked(tickers)
 
@@ -252,9 +278,7 @@ def test_same_sector_correlates_more_than_cross_sector():
     for _ in range(N):
         sim._step()
         for t in tickers:
-            q = cache.get(t)
-            if q:
-                series[t].append(q.price)
+            series[t].append(sim._state[t].price)  # full-precision internal
 
     def log_returns(prices: list[float]) -> list[float]:
         return [math.log(prices[i + 1] / prices[i]) for i in range(len(prices) - 1)]
@@ -274,6 +298,6 @@ def test_same_sector_correlates_more_than_cross_sector():
     corr_tech = pearson(ret["AAPL"], ret["GOOGL"])   # same sector
     corr_cross = pearson(ret["AAPL"], ret["JPM"])    # cross sector
 
-    assert corr_tech > corr_cross, (
-        f"Expected tech-tech ({corr_tech:.3f}) > tech-finance ({corr_cross:.3f})"
+    assert corr_tech > corr_cross + 0.1, (
+        f"Expected tech-tech ({corr_tech:.3f}) clearly > tech-finance ({corr_cross:.3f})"
     )
