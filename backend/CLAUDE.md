@@ -19,6 +19,17 @@ uv run --python 3.12 uvicorn app:app --port 8000
 Tests live in `backend/tests/` (pytest, `asyncio_mode = "auto"`). `uv.lock` is
 committed; keep it in sync with `uv lock` after changing dependencies.
 
+A rich terminal demo of the simulator (`demo/market_demo.py`, behind the
+optional `demo` extra) streams live prices with color flashes and sparklines:
+
+```
+uv run --python 3.12 --extra demo python -m demo.market_demo
+uv run --python 3.12 --extra demo python -m demo.market_demo --seed 42 --duration 10
+```
+
+`rich` is imported lazily inside the rendering functions so the pure helpers
+stay importable (and unit-tested) without the `demo` extra.
+
 ## Layout and imports
 
 Flat module layout — imports are top-level (`from market.cache import ...`,
