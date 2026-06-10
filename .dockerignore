@@ -1,0 +1,29 @@
+# Git / CI
+.git
+.github
+
+# Env files (never bake secrets into the image)
+.env
+.env.*
+!.env.example
+
+# Python
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/*.pyc
+
+# Node / frontend build artifacts
+**/node_modules
+frontend/.next
+frontend/out
+
+# Local SQLite database
+db/finally.db
+db/*.db-shm
+db/*.db-wal
+
+# Docs / tests not needed in the runtime image
+planning
+test

@@ -1,0 +1,20 @@
+# Convenience wrapper for local runs. Equivalent to the start scripts:
+#   docker compose up --build
+# The named volume `finally-data` persists the SQLite database across restarts.
+services:
+  finally:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: finally
+    container_name: finally
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - finally-data:/app/db
+    restart: unless-stopped
+
+volumes:
+  finally-data:
