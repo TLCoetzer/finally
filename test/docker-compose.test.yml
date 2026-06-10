@@ -1,11 +1,15 @@
 # FinAlly E2E stack (PLAN.md §12).
 #
 # Two services:
-#   app    - the production image (built from ../Dockerfile), run with
+#   web    - the production image (built from ../Dockerfile), run with
 #            LLM_MOCK=true and the simulator (no MASSIVE_API_KEY) for
 #            deterministic tests. A fresh DB each run (tmpfs at /app/db).
+#            NOTE: the service is named "web", not "app". Chromium HSTS-preloads
+#            the ".app" gTLD with include_subdomains, so a bare host "app" is
+#            force-upgraded to https and browser navigation fails with
+#            ERR_SSL_PROTOCOL_ERROR against this plaintext server.
 #   e2e    - the Playwright runner (browser deps live here, not in prod),
-#            waits for app health, then runs the suite against http://app:8000.
+#            waits for web health, then runs the suite against http://web:8000.
 #
 # Usage (from test/):
 #   docker compose -f docker-compose.test.yml up --build \
@@ -15,7 +19,7 @@
 # on the suite result.
 
 services:
-  app:
+  web:
     build:
       context: ..
       dockerfile: Dockerfile
@@ -43,10 +47,10 @@ services:
       context: .
       dockerfile: Dockerfile.runner
     depends_on:
-      app:
+      web:
         condition: service_healthy
     environment:
-      - BASE_URL=http://app:8000
+      - BASE_URL=http://web:8000
       - CI=1
     # Surface the HTML report + traces on the host for debugging.
     volumes:

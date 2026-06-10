@@ -212,6 +212,10 @@ frontend/.next/
 frontend/out/
 backend/static/
 
+# The generic Python "lib/" rule above unintentionally matches the frontend
+# TypeScript source directory; keep it tracked.
+!frontend/src/lib/
+
 # FinAlly — local SQLite database (Docker uses a named volume)
 db/finally.db
 db/finally.db-*

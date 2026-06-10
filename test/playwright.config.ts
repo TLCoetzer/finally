@@ -5,7 +5,9 @@ import { defineConfig, devices } from "@playwright/test";
  *
  * BASE_URL points at the running app (API + static frontend on one origin,
  * port 8000). In docker-compose.test.yml the runner reaches the app service
- * at http://app:8000; for local runs it defaults to http://localhost:8000.
+ * at http://web:8000 (named "web", not "app", to avoid Chromium's HSTS
+ * preload of the ".app" gTLD force-upgrading it to https); for local runs it
+ * defaults to http://localhost:8000.
  */
 const baseURL = process.env.BASE_URL ?? "http://localhost:8000";
 

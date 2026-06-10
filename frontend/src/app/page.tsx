@@ -13,6 +13,7 @@ import { ChatPanel } from "@/components/ChatPanel";
 import { usePriceStream } from "@/lib/usePriceStream";
 import { liveTotalValue, livePositions } from "@/lib/portfolio";
 import { api } from "@/lib/api";
+import { uid } from "@/lib/id";
 import type {
   ChatLine,
   PortfolioResponse,
@@ -93,7 +94,7 @@ export default function Page() {
 
   const handleSend = useCallback(
     async (message: string) => {
-      const id = crypto.randomUUID();
+      const id = uid();
       setChatLines((prev) => [...prev, { id, role: "user", content: message }]);
       setChatLoading(true);
       try {
@@ -101,7 +102,7 @@ export default function Page() {
         setChatLines((prev) => [
           ...prev,
           {
-            id: crypto.randomUUID(),
+            id: uid(),
             role: "assistant",
             content: res.message,
             actions: res.actions,
@@ -113,7 +114,7 @@ export default function Page() {
         setChatLines((prev) => [
           ...prev,
           {
-            id: crypto.randomUUID(),
+            id: uid(),
             role: "assistant",
             content:
               err instanceof Error
