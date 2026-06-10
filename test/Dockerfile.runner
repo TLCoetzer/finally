@@ -1,0 +1,20 @@
+# Playwright runner image for the FinAlly E2E suite.
+# Kept separate from the production app image so browser deps never ship in prod
+# (PLAN.md §12). The official Playwright image bundles browsers + OS deps.
+# Image tag MUST match the @playwright/test version in package.json so the
+# bundled browsers match the test runner (Playwright enforces this).
+FROM mcr.microsoft.com/playwright:v1.60.0-jammy
+
+WORKDIR /e2e
+
+# Install JS deps first for layer caching. Use the lockfile for reproducibility.
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+
+# Test sources.
+COPY playwright.config.ts tsconfig.json ./
+COPY support ./support
+COPY tests ./tests
+
+# Browsers are preinstalled in the base image; default to running the suite.
+CMD ["npx", "playwright", "test"]

@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
+  body {
+    @apply bg-ink-900 text-chalk font-mono antialiased;
+    background-image:
+      radial-gradient(1200px 600px at 80% -10%, rgba(32, 157, 215, 0.06), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(117, 57, 145, 0.07), transparent 60%);
+    background-attachment: fixed;
+  }
+  /* Thin terminal scrollbars. */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-500 rounded-full;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply bg-ink-800/80 border border-ink-500/70 rounded-lg shadow-panel backdrop-blur-sm;
+  }
+  .panel-head {
+    @apply flex items-center justify-between px-3 py-2 border-b border-ink-500/60;
+  }
+  .panel-title {
+    @apply font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-muted;
+  }
+  .btn {
+    @apply rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-buy {
+    @apply bg-up/15 text-up border border-up/40 hover:bg-up/25;
+  }
+  .btn-sell {
+    @apply bg-down/15 text-down border border-down/40 hover:bg-down/25;
+  }
+  .btn-submit {
+    @apply bg-brand-purple text-white border border-brand-purple/60 hover:bg-brand-purple/85;
+  }
+  .btn-ghost {
+    @apply bg-ink-600/60 text-muted border border-ink-500/70 hover:text-chalk hover:bg-ink-600;
+  }
+  .field {
+    @apply bg-ink-900/70 border border-ink-500/70 rounded-md px-2.5 py-1.5 text-sm text-chalk placeholder:text-muted/60 focus:outline-none focus:border-brand-blue/70 focus:ring-1 focus:ring-brand-blue/40;
+  }
+}

@@ -205,3 +205,15 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# FinAlly — Node / frontend build artifacts
+node_modules/
+frontend/.next/
+frontend/out/
+backend/static/
+
+# FinAlly — local SQLite database (Docker uses a named volume)
+db/finally.db
+db/finally.db-*
+*.db-shm
+*.db-wal

@@ -1,0 +1,17 @@
+{
+  "name": "finally-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FinAlly Playwright E2E suite (PLAN.md §12)",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.60.0",
+    "@types/node": "^25.9.2",
+    "typescript": "^5.9.3"
+  }
+}
